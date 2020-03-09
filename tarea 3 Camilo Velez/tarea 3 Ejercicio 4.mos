@@ -1,0 +1,86 @@
+!@encoding CP1252
+model ModelName
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+!optional parameters section
+parameters
+!  SAMPLEPARAM1='c:\test\'
+!  SAMPLEPARAM2=false
+   PROJECTDIR='' ! for when file is added to project
+end-parameters
+
+!sample declarations section
+declarations
+	
+	B: set of integer
+	R: set of integer
+	O: set of integer
+	
+	N: array(B) of set of integer
+	
+	c: array(B) of real
+	
+	x: array(B, R, O) of mpvar 
+	y: mpvar
+	w: mpvar
+	
+	Objectivo:linctr
+end-declarations
+
+initializations from 'barrios.dat'
+	B
+	R
+	O
+	N
+	
+	c
+	
+end-initializations
+	
+
+Objectivo:= y - w 
+
+x(1, 1, 0) = 1
+
+
+forall(k in R) do 
+	sum(i in B, o in O)c(i) * x(i, k, o) <=  y
+	sum(i in B, o in O)c(i) * x(i, k, o) >=  w
+end-do
+
+
+forall(k in R)
+	sum(i in B)x(i, k, 0) = 1
+	
+
+forall(i in B) 
+	sum(k in R, o in O)x(i, k, o) = 1
+	
+forall(i in B, k in R, o in O | o > 0)
+	x(i, k, o) <= sum(j in N(i))x(j, k , o - 1)
+	
+		
+forall(i in B, k in R, o in O)
+	x(i, k, o) is_binary
+
+
+
+if PROJECTDIR <> '' then
+  setparam('workdir', PROJECTDIR)
+  writeln("Project directory: " + PROJECTDIR)
+end-if
+
+minimize(Objectivo)
+
+
+
+writeln("Valor de la funcion objetivo en la solucion optima ",getsol(Objectivo))
+
+loadprob(Objectivo)
+file_mps:= 'ejercicio4.mps'
+writeprob(file_mps, "")
+writeln("mps generado")
+
+
+
+end-model

@@ -1,0 +1,67 @@
+!@encoding CP1252
+model ModelName
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+!optional parameters section
+parameters
+!  SAMPLEPARAM1='c:\test\'
+!  SAMPLEPARAM2=false
+   PROJECTDIR='' ! for when file is added to project
+end-parameters
+
+!sample declarations section
+declarations
+	
+	N: set of integer
+	M: set of integer
+
+	f: array(N) of integer
+	c: array(M, N) of integer
+	
+	x: array(M, N) of mpvar 
+	y: array(N) of mpvar
+
+	
+	Objectivo:linctr
+end-declarations
+
+initializations from 'ufl.dat'
+	N
+	M
+	
+	c
+	f
+	
+end-initializations
+	
+
+Objectivo:= sum(i in M, j in N) x(i, j) * c(i, j) +  sum(j in N) y(j) * f(j) 
+ 
+	
+!forall(j in N) 
+!	sum(i in M) x(i, j) <=  y(j) * getsize(M)
+
+forall(j in N, i in M) 
+	x(i, j) <=  y(j)
+
+forall(i in M) 
+	sum(j in N) x(i, j) = 1
+	
+
+forall(j in N) 
+	y(j) <= 1
+	
+
+
+
+
+if PROJECTDIR <> '' then
+  setparam('workdir', PROJECTDIR)
+  writeln("Project directory: " + PROJECTDIR)
+end-if
+
+minimize(Objectivo)
+	
+writeln("Costo de la solucion optima ", getsol(Objectivo))
+
+end-model

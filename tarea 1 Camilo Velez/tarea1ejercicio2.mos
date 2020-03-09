@@ -1,0 +1,83 @@
+!@encoding CP1252
+model ModelName
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+!optional parameters section
+parameters
+!  SAMPLEPARAM1='c:\test\'
+!  SAMPLEPARAM2=false
+   PROJECTDIR='' ! for when file is added to project
+end-parameters
+
+!sample declarations section
+declarations
+	
+	A: set of integer
+	C: set of integer
+	
+	p: array(A) of real
+	d: array(C) of integer
+	e: array(C) of integer
+	
+	x: array(A, C) of mpvar 
+	y: array(C) of mpvar
+	
+	Objectivo:linctr
+end-declarations
+
+initializations from 'contenedores.dat'
+	A
+	C
+	
+	p
+	d
+	e	
+	
+end-initializations
+
+Objectivo:= sum(j in C)(y(j) * e(j)) 
+
+
+forall(i in A) 
+	sum(j in C) x(i, j) = 1
+	
+forall(j in C) 
+	sum(i in A) x(i, j) * p(i) - y(j) * d(j) <= 0
+
+
+forall(i in A, j in C)
+	x(i, j) is_binary
+
+forall(j in C) 
+	y(j) is_binary
+	
+
+if PROJECTDIR <> '' then
+  setparam('workdir', PROJECTDIR)
+  writeln("Project directory: " + PROJECTDIR)
+end-if
+
+
+minimize(Objectivo)
+
+
+forall(i in A) do
+	forall(j in C) do
+		if(getsol(x(i, j)) = 1) then
+			if(j <= 8) then
+				writeln("El articulo ", i, " se transporta en el contenedor  ", j, " el cual es FEU")
+				else
+					writeln("El articulo ", i, " se transporta en el contenedor  ", j, " el cual es TEU")
+			end-if
+		end-if
+	end-do
+end-do
+
+writeln("")
+
+writeln("Se usan ", getsol(sum(j in C | j < 9) y(j)), " contenedores FEU y ", getsol(sum(j in C | j >= 9) y(j)), " contenedores TEU")
+
+
+
+
+end-model

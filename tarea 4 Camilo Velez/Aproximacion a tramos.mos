@@ -1,0 +1,59 @@
+model Ejemplo
+uses "mmxprs"; 
+
+declarations
+	
+	I: set of integer 
+	B: set of integer		
+	V: set of integer
+	
+	u: array(V, B) of real
+	f: array(V, B) of real	
+	K: integer
+	
+	
+	alpha: array (V, B) of mpvar !toneladas de materia prima a producir.
+	b: array(V, I) of mpvar	
+
+end-declarations
+
+		!datos
+initializations from "datos.dat"
+	I
+	B
+	V
+	
+	u
+	f
+	K
+end-initializations
+
+FO:=sum(j in V, k in B) f(j, k) * alpha(j, k)
+
+sum(k in B) (u(1, k) * alpha(1, k) + u(2, k) * alpha(2, k)) <= 4
+
+sum(k in B) (2 * u(1, k) * alpha(1, k) + u(2, k) * alpha(2, k)) <= 5
+
+sum(k in B) (-u(1, k) * alpha(1, k) + 4 * u(2, k) * alpha(2, k)) >= 2
+
+forall(j in V) do
+	alpha(j, 0) <= b(j, 1)
+	alpha(j, K) <= b(j, K)
+end-do
+
+forall(j in V, k in B | k <> 0 and k <> K)
+	alpha(j, k) <= b(j, k) + b(j, k +1)
+
+forall(j in V) do
+	sum(k in B) alpha(j, k) = 1
+	sum(k in I) b(j, k) = 1
+end-do
+
+forall(j in V, k in I)
+	b(j, k) is_binary
+	
+minimize(FO)
+ writeln(getsol(FO))
+  	
+end-model
+

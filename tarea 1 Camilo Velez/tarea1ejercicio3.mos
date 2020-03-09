@@ -1,0 +1,82 @@
+!@encoding CP1252
+model ModelName
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+!optional parameters section
+parameters
+!  SAMPLEPARAM1='c:\test\'
+!  SAMPLEPARAM2=false
+   PROJECTDIR='' ! for when file is added to project
+end-parameters
+
+!sample declarations section
+declarations
+	
+	C: set of integer
+	B: set of integer
+	
+	a: array(B) of integer
+	e: array(B) of integer
+	d: array(C) of integer
+	f: array(C, B) of integer
+	
+	x: array(C, B) of mpvar 
+	y: array(B) of mpvar
+	
+	Objectivo:linctr
+end-declarations
+
+initializations from 'refrigerios1.dat'
+!initializations from 'refrigerios2.dat'
+	C
+	B
+	
+	a
+	e
+	d
+	f
+	
+	
+end-initializations
+
+Objectivo:= sum(i in C, j in B) (x(i, j) * f(i, j) + y(j) * e(j)) 
+
+	
+forall(j in B) 
+	sum(i in C) x(i, j) * d(i) -  y(j) * a(j) <= 0
+
+forall(i in C) 
+	sum(j in B) x(i, j) = 1
+	
+
+forall(i in C, j in B)
+	x(i, j) is_binary
+
+forall(j in B) 
+	y(j) is_binary
+	
+
+if PROJECTDIR <> '' then
+  setparam('workdir', PROJECTDIR)
+  writeln("Project directory: " + PROJECTDIR)
+end-if
+
+minimize(Objectivo)
+
+forall(i in C) do
+	forall(j in B) do
+		if(getsol(x(i, j)) = 1) then
+			writeln("Al colegio ", i, " se le asigna el centro  ", j)
+		end-if
+	end-do
+end-do
+
+writeln("")
+
+forall(j in B) do
+	if(getsol(y(j)) > 0) then
+		writeln("Se abrio el centro ", j)
+	end-if
+end-do
+
+end-model

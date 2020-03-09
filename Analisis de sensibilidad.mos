@@ -1,0 +1,103 @@
+!@encoding CP1252
+model Ejemplo
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+			!PROBLEMA
+
+!Una pequeña empresa se dedica al procesamiento de 2 materias primas diferentes, la materia prima X 
+!requiere 3 horas de trabajo en la maquina 1 y 3 horas de trabajo en maquina 2 por tonelada para ser completamente 
+!procesada, por otro lado, la materia prima Y requiere 1 hora de trabajo en la maquina 1 y 2 horas de trabajo en 
+!máquina 2 por tonelada para ser procesada, esta semana la empresa ha tenido una serie de imprevistos por 
+!lo cual solo cuenta con 20 horas de trabajo en la maquina 1 disponibles, por otro lado, el trabajo en la maquina 2
+!tiene un alto costo, por lo cual se espera que esta maquina sea usada menos de 12 horas en total, 
+!teniendo en cuenta que no se venderán más de 5 toneladas de materia prima Y procesada y que cada materia 
+!prima genera una utilidad de $5 y $3 respectivamente. 
+
+!¿Cuantas toneladas de cada una se deben procesar para maximizar la utilidad generada?.
+
+
+declarations
+		!conjuntos
+mp: set of integer  !Materias primas
+mq: set of integer  !Maquinas
+
+		!Parametros
+tmq: array (mp,mq) of integer	!tiempo de trabajo de la materia prima en las maquinas
+dtmq: array (mq) of integer !disponibilidad de tiempo de trabajo en cada maquina
+utl: array (mp) of integer !utilidad
+pmy: real  !produccion maxima de y
+
+		!variables
+x: array (mp) of mpvar !toneladas de materia prima a producir.
+		
+		!!!!!!!!!!Restricciones!!!!!!!!!
+Restriccion1: array (mq) of linctr
+Restriccion2: linctr
+
+end-declarations
+
+		!datos
+initializations from "Ejemplo1.dat"
+	mp mq tmq dtmq utl pmy
+end-initializations
+
+		!funcion objetivo
+FO:=sum(i in mp)x(i)*utl(i)
+
+		!Restricciones
+forall(j in mq)
+Restriccion1(j):= sum(i in mp)x(i)*tmq(i,j) <= dtmq(j)
+
+Restriccion2:= x(2)<= pmy
+
+		!variable
+
+maximize(FO)
+
+writeln("utilidad total: ", getobjval)
+
+writeln("------------- Variables Costos reducidos ------------------")
+
+write("VP")
+writeln
+forall(i in mp) do
+	write("X",i)
+	   write(strfmt(getrcost(x(i)),9))
+	writeln
+end-do
+
+writeln("\n-------------- Coeficientes de las variables en la F.O. --------------")
+
+writeln(strfmt(" X ", 20))
+writeln("Tipo",strfmt(" Limte inferior ",8),strfmt(" Limite superior",9))
+ forall(i in mp) do
+  writeln(strfmt(i,2),
+   strfmt(getsensrng(XPRS_DN,x(i)),11),
+   strfmt(getsensrng(XPRS_UP,x(i)),19))
+ end-do
+
+writeln("\n------ Información de las restricciones ------")
+  
+writeln(strfmt(" Restriccion1 ", 50))
+writeln("Tipo",strfmt(" Holgura ",10),strfmt(" Actividad ",15),strfmt(" Variable dual ",15),strfmt(" Rango lado izq. ",22),strfmt(" Rango lado der. ",19))
+ forall(j in mq) do
+  writeln(strfmt(j,2),
+   strfmt(getslack(Restriccion1(j)),8),
+   strfmt(getact(Restriccion1(j)),15),
+   strfmt(getdual(Restriccion1(j)),13),
+   strfmt(getsensrng(XPRS_DN,Restriccion1(j)),19),
+   strfmt(getsensrng(XPRS_UP,Restriccion1(j)),21))
+ end-do	
+ 
+writeln(strfmt(" Restriccion2 ", 50))
+writeln("Tipo",strfmt(" Holgura ",10),strfmt(" Actividad ",15),strfmt(" Variable dual ",15),strfmt(" Rango lado izq. ",22),strfmt(" Rango lado der. ",19))
+
+  writeln(strfmt(1,2),
+   strfmt(getslack(Restriccion2),8),
+   strfmt(getact(Restriccion2),15),
+   strfmt(getdual(Restriccion2),13),
+   strfmt(getsensrng(XPRS_DN,Restriccion2),19),
+   strfmt(getsensrng(XPRS_UP,Restriccion2),21))
+  	
+end-model
+

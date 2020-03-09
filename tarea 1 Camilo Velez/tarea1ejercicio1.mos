@@ -1,0 +1,95 @@
+!@encoding CP1252
+model ModelName
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+!optional parameters section
+parameters
+   PROJECTDIR='' 
+end-parameters
+
+!sample declarations section
+declarations
+	
+	T: set of integer
+	
+	u: array(T) of integer
+	c: array(T) of integer
+	m: array(T) of integer
+	n: array(T) of integer
+	l: array(T) of integer
+	
+	a: integer
+	b: integer
+	d: integer
+	f: integer
+	o: integer
+	g: integer
+	h: integer
+	q: integer
+	r: integer
+	
+	x: array(T) of mpvar 
+	y: array(T) of mpvar
+	w: mpvar
+	
+	Objectivo:linctr
+end-declarations
+
+initializations from 'cuadros.dat'
+	T 
+	
+	u 
+	c 
+	m 
+	n
+	l
+	
+	a
+	b
+	d
+	f
+	o
+	g
+	h
+	q
+	r
+	
+end-initializations
+
+Objectivo:= sum(i in T)( x(i) * (u(i) - c(i) * d - m(i) * f) - y(i) * a) - w * b 
+
+sum(i in T) x(i) * m(i) <= 7 * g * o
+
+sum(i in T) x(i) * n(i) - 7 * h * w <= 0
+
+sum(i in T) x(i) * c(i) <= q
+
+sum(i in T) y(i) <= r
+
+forall(i in T) do
+	x(i)/l(i) - y(i) <= 0
+end-do 
+
+forall(i in T)do
+	x(i) >= 0
+	y(i) >= 0
+	x(i) is_integer
+	y(i) is_integer
+end-do
+
+w is_integer
+	
+
+if PROJECTDIR <> '' then
+  setparam('workdir', PROJECTDIR)
+  writeln("Project directory: " + PROJECTDIR)
+end-if
+
+maximize(Objectivo)
+writeln("Se fabricaron ", getsol(x(1)), " cuadros pequeños, ", getsol(x(2)), ", cuadros medianos y ", getsol(x(3))," cuadros grandes")
+
+writeln("")
+
+writeln("Se contrataron ", getsol(w), " empleados")
+
+end-model

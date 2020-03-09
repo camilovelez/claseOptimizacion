@@ -1,0 +1,146 @@
+!@encoding CP1252
+model ModelName
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+!optional parameters section
+parameters
+   PROJECTDIR='' 
+end-parameters
+
+!sample declarations section
+declarations
+	
+	M: set of integer
+	G: set of integer
+	
+	a: array(M, G) of integer
+	b: integer
+	c: integer
+	
+	x: array(M) of mpvar
+	
+	minTotalAtraer: linctr 
+	inversionMinInternet: linctr 
+	inversionMaxPrensa: linctr
+	
+	limitePorMedio: array (M) of linctr
+	minPorGrupo: array (G) of linctr
+	
+	Objectivo:linctr
+end-declarations
+
+initializations from 'datos campana.dat'
+	M
+	G
+	
+	a
+	b
+	c
+	
+end-initializations
+
+Objectivo:= sum(i in M) x(i)
+
+minTotalAtraer:= sum(i in M, k in G) (x(i) * a(i,k)) >= b
+
+inversionMinInternet:= 0.4 * sum(i in M) x(i) <= x(4)
+
+inversionMaxPrensa:= 0.15 * sum(i in M) x(i) >= x(1)
+
+forall(j in M)
+	limitePorMedio(j):= 0.5 * sum(i in M) x(i) >= x(j)
+
+forall(k in G)
+	minPorGrupo(k):= sum(i in M) (x(i) * a(i, k)) >= c
+
+	
+
+if PROJECTDIR <> '' then
+  setparam('workdir', PROJECTDIR)
+  writeln("Project directory: " + PROJECTDIR)
+end-if
+
+minimize(Objectivo)
+
+writeln("Inversion total: ", getobjval)
+
+writeln("Se invirtieron ", getsol(x(1)), " millones en prensa, ", getsol(x(2)), " en radio, ", getsol(x(3))," en tv y ", getsol(x(4)), " en internet")
+
+writeln("\n-------------- Celdas de las variables en la F.O. --------------")
+
+writeln(strfmt(" X ", 20))
+writeln("Variable",strfmt(" Valor ",10), strfmt(" Costo reducido ",10) ,strfmt(" Limite inferior ",8),strfmt(" Limite superior",9))
+ forall(i in M) do
+  writeln(strfmt(i,2),
+   strfmt(getsol(x(i)),15),
+   strfmt(getrcost(x(i)),15),
+   strfmt(getsensrng(XPRS_DN,x(i)),15),
+   strfmt(getsensrng(XPRS_UP,x(i)),14))
+ end-do
+
+writeln("\n------ Información de las restricciones ------")
+
+
+writeln(strfmt(" minTotalAtraer ", 50))
+writeln("Tipo",strfmt(" Holgura ",10),strfmt(" Actividad ",15),strfmt(" Variable dual ",15),strfmt(" Rango lado izq. ",22),strfmt(" Rango lado der. ",19))
+
+  writeln(strfmt(1,2),
+   strfmt(getslack(minTotalAtraer),8),
+   strfmt(getact(minTotalAtraer),15),
+   strfmt(getdual(minTotalAtraer),15),
+   strfmt(getsensrng(XPRS_DN,minTotalAtraer),19),
+   strfmt(getsensrng(XPRS_UP,minTotalAtraer),21))
+  
+writeln("")
+  
+writeln(strfmt(" inversionMinInternet ", 50))
+writeln("Tipo",strfmt(" Holgura ",10),strfmt(" Actividad ",15),strfmt(" Variable dual ",15),strfmt(" Rango lado izq. ",22),strfmt(" Rango lado der. ",19))
+
+  writeln(strfmt(1,2),
+   strfmt(getslack(inversionMinInternet),8),
+   strfmt(getact(inversionMinInternet),15),
+   strfmt(getdual(inversionMinInternet),13),
+   strfmt(getsensrng(XPRS_DN,inversionMinInternet),19),
+   strfmt(getsensrng(XPRS_UP,inversionMinInternet),21))
+  
+  writeln("")
+  
+writeln(strfmt(" inversionMaxPrensa ", 50))
+writeln("Tipo",strfmt(" Holgura ",10),strfmt(" Actividad ",15),strfmt(" Variable dual ",15),strfmt(" Rango lado izq. ",22),strfmt(" Rango lado der. ",19))
+
+  writeln(strfmt(1,2),
+   strfmt(getslack(inversionMaxPrensa),8),
+   strfmt(getact(inversionMaxPrensa),15),
+   strfmt(getdual(inversionMaxPrensa),13),
+   strfmt(getsensrng(XPRS_DN,inversionMaxPrensa),19),
+   strfmt(getsensrng(XPRS_UP,inversionMaxPrensa),21))
+  
+  writeln("")
+  
+writeln(strfmt(" limitePorMedio ", 50))
+writeln("Tipo",strfmt(" Holgura ",10),strfmt(" Actividad ",15),strfmt(" Variable dual ",15),strfmt(" Rango lado izq. ",22),strfmt(" Rango lado der. ",19))
+ forall(j in M) do
+  writeln(strfmt(j,2),
+   strfmt(getslack(limitePorMedio(j)),8),
+   strfmt(getact(limitePorMedio(j)),15),
+   strfmt(getdual(limitePorMedio(j)),13),
+   strfmt(getsensrng(XPRS_DN,limitePorMedio(j)),19),
+   strfmt(getsensrng(XPRS_UP,limitePorMedio(j)),21))
+ end-do
+ 
+   writeln("")
+  
+writeln(strfmt(" minPorGrupo ", 50))
+writeln("Tipo",strfmt(" Holgura ",10),strfmt(" Actividad ",15),strfmt(" Variable dual ",15),strfmt(" Rango lado izq. ",22),strfmt(" Rango lado der. ",19))
+ forall(j in G) do
+  writeln(strfmt(j,2),
+   strfmt(getslack(minPorGrupo(j)),8),
+   strfmt(getact(minPorGrupo(j)),15),
+   strfmt(getdual(minPorGrupo(j)),13),
+   strfmt(getsensrng(XPRS_DN,minPorGrupo(j)),19),
+   strfmt(getsensrng(XPRS_UP,minPorGrupo(j)),21))
+ end-do
+  
+
+
+end-model

@@ -1,0 +1,316 @@
+!@encoding CP1252
+model ModelName
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+!optional parameters section
+parameters
+!  SAMPLEPARAM1='c:\test\'
+!  SAMPLEPARAM2=false
+   PROJECTDIR='' ! for when file is added to project
+end-parameters
+
+!sample declarations section
+declarations
+	
+	I: set of string
+	D: set of string
+	DI: set of string
+	DJ: set of string
+	Fe: set of string
+	V: set of string
+	C: set of integer
+	
+	H: set of string
+	B: set of real
+	M: set of integer
+	
+	AUX: set of integer
+	
+	
+	
+	Q: real
+	Qini: real
+
+	Tmax: real
+	s: array(I) of real
+	
+	t: array(V, V) of real
+	e: array(V, V) of real
+	
+	b: real
+	b1: real
+	k1: real	
+		
+	g: array(M) of real
+	Delta: integer
+	
+	p: array(Fe, H) of real
+	pDepot: real
+	
+	a: array (H, B) of real
+	l: array (H, B) of real
+	
+	d: array(M) of real
+	
+	q: array(M, H) of real
+	
+	
+	x: array(D, D, C) of mpvar
+	z: array(D, Fe, D, C) of mpvar
+	
+	capGamma: array(C) of mpvar
+	
+	v: array(D, Fe, D, H, C) of mpvar
+	
+	term1 : mpvar
+	term2 : mpvar
+	term3 : mpvar
+	term4 : mpvar
+	
+	tau: array(D, C) of mpvar
+	y: array(D, C) of mpvar
+	
+	phi: array(D, Fe, D, H, C) of mpvar
+	delta: array(D, Fe, D, C) of mpvar
+	
+	w: array(D, Fe, D, H, B, C) of mpvar
+	u: array(D, Fe, D, H, B, C) of mpvar
+	
+	alpha: array(D, Fe, D, H, B, C) of mpvar
+	lambda: array(D, Fe, D, H, B, C) of mpvar
+	
+	o: array(D, Fe, D, C) of mpvar
+	r: array(D, Fe, D, C) of mpvar
+
+	
+	pi: array(D, M, C) of mpvar
+	mu: array(D, M, C) of mpvar
+	gamma: array(D, Fe, D, M, C) of mpvar
+	psi: array(D, Fe, D, M, H, C) of mpvar
+	
+	Objectivo:linctr
+end-declarations
+
+
+initializations from 'Datos.dat'
+	I
+	D
+	DI
+	DJ
+	Fe
+	V
+	C
+	
+	H
+	B
+
+	M
+	
+	AUX
+	
+	b
+	b1
+	Q
+	Qini
+	Tmax
+	s
+	
+	t
+	e
+	
+	g
+	Delta
+	
+	p
+	pDepot
+	
+	a
+	l
+	
+	d
+	
+	q
+	
+end-initializations
+	
+
+!Objectivo:= sum(i in D, j in D, f in Fe, h in H, c in C)(p(f, h) * phi(i, f, j, h, c)) + sum(j in D, m in M, c in C) (d(m) * mu(j,m, c)) +  sum(i in DI, j in D, f in Fe, m in M, h in H, c in C) (q(m, h) * psi(i, f, j, m, h, c)) + sum(c in C) (capGamma(c) - Qini) * pDepot
+Objectivo:= sum(j in D, m in M, c in C) (d(m) * mu(j,m, c)) +  sum(i in DI, j in D, f in Fe, m in M, h in H, c in C) (q(m, h) * psi(i, f, j, m, h, c))
+!Objectivo:= sum(j in D, m in M, c in C) (d(m) * mu(j,m, c)) 
+
+term1 = sum(i in D, j in D, f in Fe, h in H, c in C)(p(f, h) * phi(i, f, j, h, c))
+term2 = sum(j in D, m in M, c in C) (d(m) * mu(j,m, c))
+term3 = sum(i in DI, j in D, f in Fe, m in M, h in H, c in C) (q(m, h) * psi(i, f, j, m, h, c))
+term4 = sum(c in C) (capGamma(c) - Qini) * pDepot
+
+
+forall (j in I)
+	sum(i in D | j <> i, c in C)(x(i, j, c) + sum(f in Fe)z(i, f, j, c)) = 1
+
+forall (j in D, c in C)
+	sum(i in D)(x(i, j, c) - x(j, i, c) + sum(f in Fe)(z(i, f, j, c) - z(j, f, i, c))) = 0
+
+forall(c in C)do
+	sum(i in D) (x(i, i, c) + sum(f in Fe) z(i, f, i, c)) = 0
+	sum(f in Fe) z("depot0", f, "depotN", c) + x("depot0", "depotN", c) = 0
+	sum(i in I) (x("depotN", i, c) + x(i, "depot0", c) + sum(f in Fe) (z("depotN", f, i, c) + z(i, f, "depot0", c))) = 0
+	sum(i in I) (x("depot0", i, c) + x(i, "depotN", c) + sum(f in Fe) (z("depot0", f, i, c) + z(i, f, "depotN", c))) <= 2 
+end-do
+
+
+sum(i in I) (x("depot0", i, 1) + x(i, "depotN", 1) + sum(f in Fe) (z("depot0", f, i, 1) + z(i, f, "depotN", 1))) = 2
+	
+!!!!
+
+forall(i in DI, j in D | j <> i, c in C)
+	sum(h in H, f in Fe) v(i, f, j, h, c) <= sum(f in Fe) z(i, f, j, c)
+
+forall( h in H, i in DI, j in D | j <> i, c in C)
+	sum(f in Fe) phi(i, f, j, h, c) <= Q * sum(f in Fe) v(i, f, j, h, c)
+
+forall(i in DI, j in D | j <> i, c in C)
+	sum(f in Fe) delta(i, f, j, c) <= Tmax * sum(f in Fe) z(i, f, j, c)
+	
+!!!!! las de carga al llegar
+
+forall(i in DI, j in D | j <> i, c in C)
+	y(i, c) - sum(f in Fe) (e(i, f) * z(i, f, j, c)) >= sum(f in Fe, h in H, k in B) (a(h, k) * alpha(i, f, j, h, k, c))
+
+forall(i in DI, j in D | j <> i, c in C) 
+	sum(f in Fe) o(i, f, j, c) = sum(h in H, k in B, f in Fe) l(h, k) * alpha(i, f, j, h, k, c)
+	
+forall(i in DI, j in D | j <> i, h in H, c in C) do
+	sum(k in B, f in Fe) alpha(i, f, j, h, k, c) = sum(k in B, f in Fe) w(i, f, j, h, k, c)
+	sum(f in Fe) alpha(i, f, j, h, 0, c) <= sum(f in Fe) w(i, f, j, h, 0, c)
+	sum(f in Fe) alpha(i, f, j, h, b, c) <= sum(f in Fe) w(i, f, j, h, b1, c)
+	sum(k in B, f in Fe) w(i, f, j, h, k, c) <= sum(f in Fe) v(i, f, j, h, c)
+end-do
+
+forall(i in DI, j in D | j <> i, h in H, aux in AUX | aux <> 1 and aux <> 4, c in C)
+	sum(f in Fe) alpha(i, f, j, h, B(aux), c) <= sum(f in Fe) (w(i, f, j, h, B(aux), c) + w(i, f, j, h, B(aux + 1), c))
+
+!!!! las de carga al salir
+forall(i in DI, j in D | j <> i, c in C)
+	y(i, c) - sum(f in Fe) (e(i, f) * z(i, f, j, c) + sum(h in H) phi(i, f, j, h, c)) >= sum(f in Fe, h in H, k in B) (a(h, k) * lambda(i, f, j, h, k, c))
+
+forall(i in DI, j in D | j <> i, c in C) 
+	sum(f in Fe) r(i, f, j, c) = sum(f in Fe, h in H, k in B) l(h, k) * lambda(i, f, j, h, k, c)
+	
+forall(i in DI, j in D | j <> i, h in H, c in C) do
+	sum(k in B, f in Fe) lambda(i, f, j, h, k, c) = sum(k in B, f in Fe) u(i, f, j, h, k, c)
+	sum(f in Fe) lambda(i, f, j, h, 0, c) <= sum(f in Fe) u(i, f, j, h, 0, c)
+	sum(f in Fe) lambda(i, f, j, h, b, c) <= sum(f in Fe) u(i, f, j, h, b1, c)
+	sum(k in B, f in Fe) u(i, f, j, h, k, c) <= sum(f in Fe) v(i, f, j, h, c)
+end-do
+
+
+forall(i in DI, j in D | j <> i, h in H, aux in AUX | aux <> 1 and aux <> 4, c in C)
+	sum(f in Fe) lambda(i, f, j, h, B(aux), c) <= sum(f in Fe) (u(i, f, j, h, B(aux), c) + u(i, f, j, h, B(aux + 1), c))
+
+!!!!!!!!!!!!!! las de energia
+
+forall(c in C)
+	y("depot0", c) = capGamma(c)
+	
+forall(i in I, c in C)
+	y(i, c) - e(i, "depotN") * x(i, "depotN", c) - sum(f in Fe) ((e(i, f) + e(f, "depotN")) * z(i, f, "depotN", c) - sum(h in H) phi(i, f, "depotN", h, c)) >= 0
+
+
+forall(i in D, j in D | j <> i, c in C) do
+	y(j, c) + sum (f in Fe) (e(f, j) * z(i, f, j, c) + sum(h in H) phi(i, f, j, h, c)) <= Q
+	y(i, c) - e(i, j) * x(i, j, c)- sum (f in Fe) e(f, j) * z(i, f, j, c) >= 0
+end-do
+
+forall(i in DI, j in I | j <> i, c in C) do
+	y(i, c) - y(j, c) >= e(i, j) * x(i, j, c) + sum(f in Fe) ((e(i, f) + e(f, j)) * z(i, f, j, c) - sum(h in H) phi(i, f, j, h, c)) - Q * (1 - (x(i, j, c) + sum(f in Fe) z(i, f, j, c)))
+	y(i, c) - y(j, c) <= e(i, j) * x(i, j, c) + sum(f in Fe) ((e(i, f) + e(f, j)) * z(i, f, j, c) - sum(h in H) phi(i, f, j, h, c)) + Q * (1 - (x(i, j, c) + sum(f in Fe) z(i, f, j, c)))
+end-do
+
+
+
+!!!!!!!!!!!!!! las de tiempo
+forall(c in C)
+	tau("depot0", c) = 0
+
+forall(j in I, c in C)
+	tau(j, c) >= s(j) + t("depot0", j) * x("depot0", j, c) + sum(f in Fe) ((t("depot0", f) + t(f, j)) * z("depot0", f, j, c)  + delta("depot0", f, j, c))
+
+forall(j in I, c in C)
+	tau(j, c) + t(j, "depotN") * x(j, "depotN", c) + sum(f in Fe) ((t(j, f) + t(f, "depotN")) * z(j, f, "depotN", c) + delta(j, f, "depotN", c)) <= Tmax
+
+
+forall(i in I, j in I | j <> i, c in C)
+	tau(j, c) >= tau(i, c) + s(j) + t(i, j) * x(i, j, c) + sum(f in Fe) ((t(i, f) + t(f, j)) * z(i, f, j, c) + delta(i, f, j, c)) - Tmax * (1 - (x(i, j, c) + sum(f in Fe) z(i, f, j, c)))
+
+forall(i in DI, j in D | j <> i, c in C)
+	sum(f in Fe) delta(i, f, j, c) = sum(f in Fe) (r(i, f, j, c) - o(i, f, j, c))
+	
+!!!!!!!!!!!!degradacion
+
+forall(j in D, c in C)
+	sum(m in M) mu(j, m, c) = sum(i in D | j <> i) (e(i, j) * x(i, j, c) + sum(f in Fe) (e(i, f) + e(f, j)) * z(i, f, j, c))
+
+
+forall(j in DI, m in M, c in C) do
+	mu(j, m, c) <= Delta * pi(j, m, c)
+	mu(j, m, c) <= g(m) - y(j, c) + Q * (1 - pi(j, m, c))
+end-do
+
+forall(i in DI, j in D | j <> i, c in C)
+	sum(m in M, f in Fe) psi(i, f, j, m, "power1", c) = (capGamma(c) - Qini) + sum(f in Fe) phi(i, f, j, "power1", c)
+
+forall(i in DI, j in D | j <> i, h in H | h <> "power1", c in C)
+	sum(m in M, f in Fe) psi(i, f, j, m, h, c) = sum(f in Fe) phi(i, f, j, h, c)
+
+forall(i in DI, j in D | j <> i, m in M, c in C) do
+	sum(h in H, f in Fe) psi(i, f, j, m, h, c) <= Delta * sum(f in Fe) gamma(i, f, j, m, c)
+	sum(h in H, f in Fe) psi(i, f, j, m, h, c) <= g(m) - (y(i, c) - sum(f in Fe) e(i, f) * z(i, f, j, c)) +  Q * (1 - sum(f in Fe) gamma(i, f, j, m, c))
+end-do
+!)
+!!!!!! dominio
+
+forall(i in D, j in D, c in C)
+	x(i, j, c) is_binary
+	
+forall(i in D, j in D, f in Fe, c in C)
+	z(i, f, j, c) is_binary
+
+forall(i in D, j in D, f in Fe, h in H, c in C)
+	v(i, f, j, h, c) is_binary
+	
+forall(i in D, j in D, f in Fe, h in H, k in B, c in C)do
+	w(i, f, j, h, k, c) is_binary
+	u(i, f, j, h, k, c) is_binary
+	alpha(i, f, j, h, k, c) <= 1
+	lambda(i, f, j, h, k, c) <= 1
+end-do
+
+forall(j in D, m in M, c in C)
+	pi(j, m, c) is_binary
+	
+forall(i in D, j in D, f in Fe, m in M, c in C)
+	gamma(i, f, j, m, c) is_binary
+	
+forall(c in C)
+	capGamma(c) >= Qini
+
+if PROJECTDIR <> '' then
+  setparam('workdir', PROJECTDIR)
+  writeln("Project directory: " + PROJECTDIR)
+end-if
+
+minimize(Objectivo)
+
+writeln(getsol(Objectivo))
+
+writeln(getsol(term1))
+writeln(getsol(term2))
+writeln(getsol(term3))
+writeln(getsol(term4))
+(!
+loadprob(Objectivo)
+file_mps:= 'ejercicio4clientes2cs.mps'
+writeprob(file_mps, "")
+writeln("mps generado")
+!)
+end-model

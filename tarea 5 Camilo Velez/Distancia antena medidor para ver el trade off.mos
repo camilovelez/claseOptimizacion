@@ -1,0 +1,50 @@
+model Ejemplo
+uses "mmxprs"; 
+
+declarations
+	
+	A: set of integer
+	M: set of integer
+	
+	d: array(M, A) of integer
+	b: integer
+	
+	x: array(A) of mpvar
+	y: array(M, A) of mpvar
+
+	
+	objetivo: linctr
+	
+end-declarations
+
+		!datos
+initializations from "datos trade-off.dat"
+	A
+	M
+	
+	d
+	b
+	
+end-initializations
+
+objetivo:=sum(m in M, a in A) d(m, a) * y(m, a) / getsize(M)
+
+forall(a in A, m in M)
+	y(m, a) <= x(a)
+
+forall(m in M)
+	sum(a in A)y(m, a) = 1
+	
+sum(a in A)x(a) <= b
+
+forall(a in A, m in M)
+	y(m, a) is_binary
+	
+forall(a in A)
+	x(a) is_binary
+	
+minimize(objetivo)
+ writeln(getsol(objetivo))
+  	
+end-model
+
